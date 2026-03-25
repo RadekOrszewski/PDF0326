@@ -1,13 +1,111 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scatter Plot</title>
+    <title>Dashboard Czasu Cyklu (Cycle Time Scatterplot)</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .instructions {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Scatter Plot</h1>
-    <p>This is a basic scatter plot page.</p>
+
+    <div class="container">
+        <h1>Czas realizacji zadań (Lead Times 2024-2025)</h1>
+        <p class="instructions">
+            <strong>Filtrowanie:</strong> Kliknij na nazwę rozmiaru (np. "Rozmiar S") w legendzie po prawej stronie, aby ukryć lub pokazać punkty z danej kategorii.<br>
+            <strong>Szczegóły:</strong> Najedź kursorem na punkt, aby zobaczyć dokładne dane (datę oraz czas realizacji w dniach).
+        </p>
+        <div id="scatterPlot" style="width:100%; height:600px;"></div>
+    </div>
+
+    <script>
+        // Dane wygenerowane na podstawie Twojego pliku CSV
+        var traceS = {
+            x: ["2024-07-15", "2024-08-22", "2024-09-10", "2024-10-14", "2024-10-28", "2025-01-08", "2025-02-14", "2025-07-11", "2025-07-29", "2025-09-08", "2025-10-04", "2025-10-19", "2025-12-10"],
+            y: [49, 48, 87, 53, 45, 5, 43, 52, 70, 53, 73, 126, 44],
+            mode: "markers",
+            type: "scatter",
+            name: "Rozmiar S",
+            marker: { size: 12, color: "#E95A74", line: {width: 1, color: 'white'} },
+            text: ["15 Lipca 2024<br>Czas realizacji: 49 dni", "22 Sierpnia 2024<br>Czas realizacji: 48 dni", "10 Września 2024<br>Czas realizacji: 87 dni", "14 Października 2024<br>Czas realizacji: 53 dni", "28 Października 2024<br>Czas realizacji: 45 dni", "8 Stycznia 2025<br>Czas realizacji: 5 dni", "14 Lutego 2025<br>Czas realizacji: 43 dni", "11 Lipca 2025<br>Czas realizacji: 52 dni", "29 Lipca 2025<br>Czas realizacji: 70 dni", "8 Września 2025<br>Czas realizacji: 53 dni", "4 Października 2025<br>Czas realizacji: 73 dni", "19 Października 2025<br>Czas realizacji: 126 dni", "10 Grudnia 2025<br>Czas realizacji: 44 dni"],
+            hoverinfo: "text+name"
+        };
+
+        var traceM = {
+            x: ["2024-09-25", "2024-10-05", "2024-11-18", "2025-02-26", "2025-04-10", "2025-07-18", "2025-08-03", "2025-08-14", "2025-08-21", "2025-08-29", "2025-10-12", "2025-10-27", "2025-11-15", "2025-11-25"],
+            y: [57, 148, 145, 415, 103, 95, 95, 101, 57, 57, 60, 57, 75, 89],
+            mode: "markers",
+            type: "scatter",
+            name: "Rozmiar M",
+            marker: { size: 12, color: "#8C65D3", line: {width: 1, color: 'white'} },
+            text: ["25 Września 2024<br>Czas realizacji: 57 dni", "5 Października 2024<br>Czas realizacji: 148 dni", "18 Listopada 2024<br>Czas realizacji: 145 dni", "26 Lutego 2025<br>Czas realizacji: 415 dni", "10 Kwietnia 2025<br>Czas realizacji: 103 dni", "18 Lipca 2025<br>Czas realizacji: 95 dni", "3 Sierpnia 2025<br>Czas realizacji: 95 dni", "14 Sierpnia 2025<br>Czas realizacji: 101 dni", "21 Sierpnia 2025<br>Czas realizacji: 57 dni", "29 Sierpnia 2025<br>Czas realizacji: 57 dni", "12 Października 2025<br>Czas realizacji: 60 dni", "27 Października 2025<br>Czas realizacji: 57 dni", "15 Listopada 2025<br>Czas realizacji: 75 dni", "25 Listopada 2025<br>Czas realizacji: 89 dni"],
+            hoverinfo: "text+name"
+        };
+
+        var traceL = {
+            x: ["2024-12-04", "2025-01-20", "2025-03-15", "2025-05-05", "2025-06-12", "2025-06-25", "2025-07-02", "2025-09-22", "2025-11-05"],
+            y: [105, 163, 123, 104, 302, 158, 98, 137, 124],
+            mode: "markers",
+            type: "scatter",
+            name: "Rozmiar L",
+            marker: { size: 12, color: "#43A074", line: {width: 1, color: 'white'} },
+            text: ["4 Grudnia 2024<br>Czas realizacji: 105 dni", "20 Stycznia 2025<br>Czas realizacji: 163 dni", "15 Marca 2025<br>Czas realizacji: 123 dni", "5 Maja 2025<br>Czas realizacji: 104 dni", "12 Czerwca 2025<br>Czas realizacji: 302 dni", "25 Czerwca 2025<br>Czas realizacji: 158 dni", "2 Lipca 2025<br>Czas realizacji: 98 dni", "22 Września 2025<br>Czas realizacji: 137 dni", "5 Listopada 2025<br>Czas realizacji: 124 dni"],
+            hoverinfo: "text+name"
+        };
+
+        var data = [traceS, traceM, traceL];
+
+        var layout = {
+            xaxis: {
+                title: 'Data ukończenia',
+                type: 'date',
+                gridcolor: '#e9ecef'
+            },
+            yaxis: {
+                title: 'Czas cyklu / realizacji (dni)',
+                gridcolor: '#e9ecef',
+                zeroline: false
+            },
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white',
+            hovermode: 'closest',
+            legend: {
+                title: { text: '<b>Filtruj po wielkości</b>' },
+                bgcolor: '#f8f9fa',
+                bordercolor: '#dee2e6',
+                borderwidth: 1
+            }
+        };
+
+        var config = { responsive: true, displayModeBar: false };
+
+        // Generowanie wykresu
+        Plotly.newPlot('scatterPlot', data, layout, config);
+    </script>
 </body>
 </html>
