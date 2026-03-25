@@ -24,88 +24,207 @@
             text-align: center;
             color: #333;
         }
-        .instructions {
-            text-align: center;
-            color: #666;
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            background-color: #f1f3f5;
+            padding: 15px;
+            border-radius: 8px;
             margin-bottom: 20px;
-            font-size: 14px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        label {
+            cursor: pointer;
+        }
+        select, input[type="checkbox"] {
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Czas realizacji zadań (Lead Times 2024-2025)</h1>
-        <p class="instructions">
-            <strong>Filtrowanie:</strong> Kliknij na nazwę rozmiaru (np. "Rozmiar S") w legendzie po prawej stronie, aby ukryć lub pokazać punkty z danej kategorii.<br>
-            <strong>Szczegóły:</strong> Najedź kursorem na punkt, aby zobaczyć dokładne dane (datę oraz czas realizacji w dniach).
-        </p>
+        <h1>Czas realizacji zadań (Lead Times)</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="timeFilter"><strong>Zakres czasu:</strong></label>
+                <select id="timeFilter" onchange="updateChart()">
+                    <option value="all">Wszystkie dane</option>
+                    <option value="6m">Ostatnie 6 miesięcy</option>
+                    <option value="3m">Ostatnie 3 miesiące</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <strong>Percentyle:</strong>
+                <label><input type="checkbox" id="p50" onchange="updateChart()"> 50%</label>
+                <label><input type="checkbox" id="p85" onchange="updateChart()"> 85%</label>
+                <label><input type="checkbox" id="p99" onchange="updateChart()"> 99%</label>
+            </div>
+        </div>
+
         <div id="scatterPlot" style="width:100%; height:600px;"></div>
     </div>
 
     <script>
-        // Dane wygenerowane na podstawie Twojego pliku CSV
-        var traceS = {
-            x: ["2024-07-15", "2024-08-22", "2024-09-10", "2024-10-14", "2024-10-28", "2025-01-08", "2025-02-14", "2025-07-11", "2025-07-29", "2025-09-08", "2025-10-04", "2025-10-19", "2025-12-10"],
-            y: [49, 48, 87, 53, 45, 5, 43, 52, 70, 53, 73, 126, 44],
-            mode: "markers",
-            type: "scatter",
-            name: "Rozmiar S",
-            marker: { size: 12, color: "#E95A74", line: {width: 1, color: 'white'} },
-            text: ["15 Lipca 2024<br>Czas realizacji: 49 dni", "22 Sierpnia 2024<br>Czas realizacji: 48 dni", "10 Września 2024<br>Czas realizacji: 87 dni", "14 Października 2024<br>Czas realizacji: 53 dni", "28 Października 2024<br>Czas realizacji: 45 dni", "8 Stycznia 2025<br>Czas realizacji: 5 dni", "14 Lutego 2025<br>Czas realizacji: 43 dni", "11 Lipca 2025<br>Czas realizacji: 52 dni", "29 Lipca 2025<br>Czas realizacji: 70 dni", "8 Września 2025<br>Czas realizacji: 53 dni", "4 Października 2025<br>Czas realizacji: 73 dni", "19 Października 2025<br>Czas realizacji: 126 dni", "10 Grudnia 2025<br>Czas realizacji: 44 dni"],
-            hoverinfo: "text+name"
-        };
+        // Płaska struktura danych połączona w jedną listę (łatwiejsze filtrowanie)
+        const rawData = [
+            {"size":"S","date":"2024-07-15","ct":49,"text":"15 Lipca 2024"},
+            {"size":"S","date":"2024-08-22","ct":48,"text":"22 Sierpnia 2024"},
+            {"size":"S","date":"2024-09-10","ct":87,"text":"10 Września 2024"},
+            {"size":"M","date":"2024-09-25","ct":57,"text":"25 Września 2024"},
+            {"size":"M","date":"2024-10-05","ct":148,"text":"5 Października 2024"},
+            {"size":"S","date":"2024-10-14","ct":53,"text":"14 Października 2024"},
+            {"size":"S","date":"2024-10-28","ct":45,"text":"28 Października 2024"},
+            {"size":"M","date":"2024-11-18","ct":145,"text":"18 Listopada 2024"},
+            {"size":"L","date":"2024-12-04","ct":105,"text":"4 Grudnia 2024"},
+            {"size":"S","date":"2025-01-08","ct":5,"text":"8 Stycznia 2025"},
+            {"size":"L","date":"2025-01-20","ct":163,"text":"20 Stycznia 2025"},
+            {"size":"S","date":"2025-02-14","ct":43,"text":"14 Lutego 2025"},
+            {"size":"M","date":"2025-02-26","ct":415,"text":"26 Lutego 2025"},
+            {"size":"L","date":"2025-03-15","ct":123,"text":"15 Marca 2025"},
+            {"size":"M","date":"2025-04-10","ct":103,"text":"10 Kwietnia 2025"},
+            {"size":"L","date":"2025-05-05","ct":104,"text":"5 Maja 2025"},
+            {"size":"L","date":"2025-06-12","ct":302,"text":"12 Czerwca 2025"},
+            {"size":"L","date":"2025-06-25","ct":158,"text":"25 Czerwca 2025"},
+            {"size":"L","date":"2025-07-02","ct":98,"text":"2 Lipca 2025"},
+            {"size":"S","date":"2025-07-11","ct":52,"text":"11 Lipca 2025"},
+            {"size":"M","date":"2025-07-18","ct":95,"text":"18 Lipca 2025"},
+            {"size":"S","date":"2025-07-29","ct":70,"text":"29 Lipca 2025"},
+            {"size":"M","date":"2025-08-03","ct":95,"text":"3 Sierpnia 2025"},
+            {"size":"M","date":"2025-08-14","ct":101,"text":"14 Sierpnia 2025"},
+            {"size":"M","date":"2025-08-21","ct":57,"text":"21 Sierpnia 2025"},
+            {"size":"M","date":"2025-08-29","ct":57,"text":"29 Sierpnia 2025"},
+            {"size":"S","date":"2025-09-08","ct":53,"text":"8 Września 2025"},
+            {"size":"L","date":"2025-09-22","ct":137,"text":"22 Września 2025"},
+            {"size":"S","date":"2025-10-04","ct":73,"text":"4 Października 2025"},
+            {"size":"M","date":"2025-10-12","ct":60,"text":"12 Października 2025"},
+            {"size":"S","date":"2025-10-19","ct":126,"text":"19 Października 2025"},
+            {"size":"M","date":"2025-10-27","ct":57,"text":"27 Października 2025"},
+            {"size":"L","date":"2025-11-05","ct":124,"text":"5 Listopada 2025"},
+            {"size":"M","date":"2025-11-15","ct":75,"text":"15 Listopada 2025"},
+            {"size":"M","date":"2025-11-25","ct":89,"text":"25 Listopada 2025"},
+            {"size":"S","date":"2025-12-10","ct":44,"text":"10 Grudnia 2025"}
+        ];
 
-        var traceM = {
-            x: ["2024-09-25", "2024-10-05", "2024-11-18", "2025-02-26", "2025-04-10", "2025-07-18", "2025-08-03", "2025-08-14", "2025-08-21", "2025-08-29", "2025-10-12", "2025-10-27", "2025-11-15", "2025-11-25"],
-            y: [57, 148, 145, 415, 103, 95, 95, 101, 57, 57, 60, 57, 75, 89],
-            mode: "markers",
-            type: "scatter",
-            name: "Rozmiar M",
-            marker: { size: 12, color: "#8C65D3", line: {width: 1, color: 'white'} },
-            text: ["25 Września 2024<br>Czas realizacji: 57 dni", "5 Października 2024<br>Czas realizacji: 148 dni", "18 Listopada 2024<br>Czas realizacji: 145 dni", "26 Lutego 2025<br>Czas realizacji: 415 dni", "10 Kwietnia 2025<br>Czas realizacji: 103 dni", "18 Lipca 2025<br>Czas realizacji: 95 dni", "3 Sierpnia 2025<br>Czas realizacji: 95 dni", "14 Sierpnia 2025<br>Czas realizacji: 101 dni", "21 Sierpnia 2025<br>Czas realizacji: 57 dni", "29 Sierpnia 2025<br>Czas realizacji: 57 dni", "12 Października 2025<br>Czas realizacji: 60 dni", "27 Października 2025<br>Czas realizacji: 57 dni", "15 Listopada 2025<br>Czas realizacji: 75 dni", "25 Listopada 2025<br>Czas realizacji: 89 dni"],
-            hoverinfo: "text+name"
-        };
+        // Funkcja do obliczania percentyla
+        function calculatePercentile(values, p) {
+            if (values.length === 0) return 0;
+            const sorted = [...values].sort((a, b) => a - b);
+            const index = (p / 100) * (sorted.length - 1);
+            const lower = Math.floor(index);
+            const upper = Math.ceil(index);
+            const weight = index % 1;
+            if (lower === upper) return sorted[lower];
+            return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+        }
 
-        var traceL = {
-            x: ["2024-12-04", "2025-01-20", "2025-03-15", "2025-05-05", "2025-06-12", "2025-06-25", "2025-07-02", "2025-09-22", "2025-11-05"],
-            y: [105, 163, 123, 104, 302, 158, 98, 137, 124],
-            mode: "markers",
-            type: "scatter",
-            name: "Rozmiar L",
-            marker: { size: 12, color: "#43A074", line: {width: 1, color: 'white'} },
-            text: ["4 Grudnia 2024<br>Czas realizacji: 105 dni", "20 Stycznia 2025<br>Czas realizacji: 163 dni", "15 Marca 2025<br>Czas realizacji: 123 dni", "5 Maja 2025<br>Czas realizacji: 104 dni", "12 Czerwca 2025<br>Czas realizacji: 302 dni", "25 Czerwca 2025<br>Czas realizacji: 158 dni", "2 Lipca 2025<br>Czas realizacji: 98 dni", "22 Września 2025<br>Czas realizacji: 137 dni", "5 Listopada 2025<br>Czas realizacji: 124 dni"],
-            hoverinfo: "text+name"
-        };
+        // Główna funkcja aktualizująca wykres w zależności od ustawień
+        function updateChart() {
+            const timeFilter = document.getElementById('timeFilter').value;
+            const showP50 = document.getElementById('p50').checked;
+            const showP85 = document.getElementById('p85').checked;
+            const showP99 = document.getElementById('p99').checked;
 
-        var data = [traceS, traceM, traceL];
-
-        var layout = {
-            xaxis: {
-                title: 'Data ukończenia',
-                type: 'date',
-                gridcolor: '#e9ecef'
-            },
-            yaxis: {
-                title: 'Czas cyklu / realizacji (dni)',
-                gridcolor: '#e9ecef',
-                zeroline: false
-            },
-            plot_bgcolor: 'white',
-            paper_bgcolor: 'white',
-            hovermode: 'closest',
-            legend: {
-                title: { text: '<b>Filtruj po wielkości</b>' },
-                bgcolor: '#f8f9fa',
-                bordercolor: '#dee2e6',
-                borderwidth: 1
+            // Filtrowanie dat
+            // Jako że najnowsza data w zbiorze to 10 Grudnia 2025, to od niej liczymy miesiące wstecz
+            let limitDate = new Date("2000-01-01"); // domyślnie bierzemy wszystko
+            if (timeFilter === "3m") {
+                limitDate = new Date("2025-09-10"); // Ostatnie 3 miesiące
+            } else if (timeFilter === "6m") {
+                limitDate = new Date("2025-06-10"); // Ostatnie 6 miesięcy
             }
-        };
 
-        var config = { responsive: true, displayModeBar: false };
+            // Aplikujemy filtr czasowy
+            const filteredData = rawData.filter(d => new Date(d.date) >= limitDate);
 
-        // Generowanie wykresu
-        Plotly.newPlot('scatterPlot', data, layout, config);
+            // Generowanie podgrup do wyświetlenia
+            const sizes = { 'S': '#E95A74', 'M': '#8C65D3', 'L': '#43A074' };
+            const traces = [];
+
+            Object.keys(sizes).forEach(s => {
+                const points = filteredData.filter(d => d.size === s);
+                traces.push({
+                    x: points.map(p => p.date),
+                    y: points.map(p => p.ct),
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: `Rozmiar ${s}`,
+                    marker: { size: 12, color: sizes[s], line: {width: 1, color: 'white'} },
+                    text: points.map(p => `${p.text}<br>Czas realizacji: ${p.ct} dni`),
+                    hoverinfo: 'text+name'
+                });
+            });
+
+            // Generowanie linii i adnotacji percentyli
+            const allCTs = filteredData.map(d => d.ct);
+            const shapes = [];
+            const annotations = [];
+
+            function addPercentileLine(p, color, name) {
+                const val = calculatePercentile(allCTs, p);
+                
+                // Kreska na wykresie
+                shapes.push({
+                    type: 'line',
+                    x0: 0, x1: 1, xref: 'paper',
+                    y0: val, y1: val, yref: 'y',
+                    line: { color: color, width: 2, dash: 'dash' }
+                });
+                
+                // Tekst nad kreską po prawej stronie
+                annotations.push({
+                    x: 1, y: val, xref: 'paper', yref: 'y',
+                    text: `<b>${name} (${Math.round(val)}d)</b>`,
+                    showarrow: false,
+                    xanchor: 'left',
+                    yanchor: 'bottom',
+                    xshift: 10,
+                    font: { color: color, size: 12 }
+                });
+            }
+
+            if (showP50) addPercentileLine(50, '#3b82f6', '50%'); // Niebieski
+            if (showP85) addPercentileLine(85, '#f59e0b', '85%'); // Pomarańczowy
+            if (showP99) addPercentileLine(99, '#ef4444', '99%'); // Czerwony
+
+            const layout = {
+                xaxis: { 
+                    title: 'Data ukończenia', 
+                    type: 'date', 
+                    gridcolor: '#e9ecef' 
+                },
+                yaxis: { 
+                    title: 'Czas cyklu / realizacji (dni)', 
+                    gridcolor: '#e9ecef', 
+                    zeroline: false 
+                },
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white',
+                hovermode: 'closest',
+                shapes: shapes,
+                annotations: annotations,
+                margin: { r: 100 }, // Zostawia margines po prawej na podpisy percentyli
+                legend: { 
+                    title: { text: '<b>Filtruj po wielkości</b>' }, 
+                    bgcolor: '#f8f9fa', 
+                    bordercolor: '#dee2e6', 
+                    borderwidth: 1 
+                }
+            };
+
+            // Rysowanie zaktualizowanego wykresu
+            Plotly.newPlot('scatterPlot', traces, layout, { responsive: true, displayModeBar: false });
+        }
+
+        // Pierwsze uruchomienie po załadowaniu okna
+        window.onload = updateChart;
     </script>
 </body>
 </html>
