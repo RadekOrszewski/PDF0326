@@ -24,6 +24,12 @@
             text-align: center;
             color: #333;
         }
+        .instructions {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -33,6 +39,7 @@
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
+            align-items: center;
         }
         .control-group {
             display: flex;
@@ -42,7 +49,12 @@
         label {
             cursor: pointer;
         }
-        select, input[type="checkbox"] {
+        input[type="number"] {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        input[type="checkbox"] {
             cursor: pointer;
         }
     </style>
@@ -52,14 +64,16 @@
     <div class="container">
         <h1>Czas realizacji zadań (Lead Times)</h1>
         
+        <p class="instructions">
+            <strong>Filtrowanie:</strong> Kliknij rozmiar w legendzie, aby go ukryć. <br>
+            <strong>Usuwanie:</strong> Kliknij na dowolny punkt na wykresie, aby go usunąć ze zbioru.
+        </p>
+
         <div class="controls">
             <div class="control-group">
-                <label for="timeFilter"><strong>Zakres czasu:</strong></label>
-                <select id="timeFilter" onchange="updateChart()">
-                    <option value="all">Wszystkie dane</option>
-                    <option value="6m">Ostatnie 6 miesięcy</option>
-                    <option value="3m">Ostatnie 3 miesiące</option>
-                </select>
+                <label for="timeFilter"><strong>Ostatnie miesiące:</strong></label>
+                <input type="number" id="timeFilter" min="1" placeholder="np. 3" oninput="updateChart()" style="width: 80px;">
+                <span style="font-size: 12px; color: #666;">(zostaw puste dla wszystkich)</span>
             </div>
             <div class="control-group">
                 <strong>Percentyle:</strong>
@@ -73,44 +87,44 @@
     </div>
 
     <script>
-        // Płaska struktura danych połączona w jedną listę (łatwiejsze filtrowanie)
-        const rawData = [
-            {"size":"S","date":"2024-07-15","ct":49,"text":"15 Lipca 2024"},
-            {"size":"S","date":"2024-08-22","ct":48,"text":"22 Sierpnia 2024"},
-            {"size":"S","date":"2024-09-10","ct":87,"text":"10 Września 2024"},
-            {"size":"M","date":"2024-09-25","ct":57,"text":"25 Września 2024"},
-            {"size":"M","date":"2024-10-05","ct":148,"text":"5 Października 2024"},
-            {"size":"S","date":"2024-10-14","ct":53,"text":"14 Października 2024"},
-            {"size":"S","date":"2024-10-28","ct":45,"text":"28 Października 2024"},
-            {"size":"M","date":"2024-11-18","ct":145,"text":"18 Listopada 2024"},
-            {"size":"L","date":"2024-12-04","ct":105,"text":"4 Grudnia 2024"},
-            {"size":"S","date":"2025-01-08","ct":5,"text":"8 Stycznia 2025"},
-            {"size":"L","date":"2025-01-20","ct":163,"text":"20 Stycznia 2025"},
-            {"size":"S","date":"2025-02-14","ct":43,"text":"14 Lutego 2025"},
-            {"size":"M","date":"2025-02-26","ct":415,"text":"26 Lutego 2025"},
-            {"size":"L","date":"2025-03-15","ct":123,"text":"15 Marca 2025"},
-            {"size":"M","date":"2025-04-10","ct":103,"text":"10 Kwietnia 2025"},
-            {"size":"L","date":"2025-05-05","ct":104,"text":"5 Maja 2025"},
-            {"size":"L","date":"2025-06-12","ct":302,"text":"12 Czerwca 2025"},
-            {"size":"L","date":"2025-06-25","ct":158,"text":"25 Czerwca 2025"},
-            {"size":"L","date":"2025-07-02","ct":98,"text":"2 Lipca 2025"},
-            {"size":"S","date":"2025-07-11","ct":52,"text":"11 Lipca 2025"},
-            {"size":"M","date":"2025-07-18","ct":95,"text":"18 Lipca 2025"},
-            {"size":"S","date":"2025-07-29","ct":70,"text":"29 Lipca 2025"},
-            {"size":"M","date":"2025-08-03","ct":95,"text":"3 Sierpnia 2025"},
-            {"size":"M","date":"2025-08-14","ct":101,"text":"14 Sierpnia 2025"},
-            {"size":"M","date":"2025-08-21","ct":57,"text":"21 Sierpnia 2025"},
-            {"size":"M","date":"2025-08-29","ct":57,"text":"29 Sierpnia 2025"},
-            {"size":"S","date":"2025-09-08","ct":53,"text":"8 Września 2025"},
-            {"size":"L","date":"2025-09-22","ct":137,"text":"22 Września 2025"},
-            {"size":"S","date":"2025-10-04","ct":73,"text":"4 Października 2025"},
-            {"size":"M","date":"2025-10-12","ct":60,"text":"12 Października 2025"},
-            {"size":"S","date":"2025-10-19","ct":126,"text":"19 Października 2025"},
-            {"size":"M","date":"2025-10-27","ct":57,"text":"27 Października 2025"},
-            {"size":"L","date":"2025-11-05","ct":124,"text":"5 Listopada 2025"},
-            {"size":"M","date":"2025-11-15","ct":75,"text":"15 Listopada 2025"},
-            {"size":"M","date":"2025-11-25","ct":89,"text":"25 Listopada 2025"},
-            {"size":"S","date":"2025-12-10","ct":44,"text":"10 Grudnia 2025"}
+        // Płaska struktura danych (dodano unikalne ID do usuwania konkretnych punktów)
+        let rawData = [
+            {id: 1, size:"S", date:"2024-07-15", ct:49, text:"15 Lipca 2024"},
+            {id: 2, size:"S", date:"2024-08-22", ct:48, text:"22 Sierpnia 2024"},
+            {id: 3, size:"S", date:"2024-09-10", ct:87, text:"10 Września 2024"},
+            {id: 4, size:"M", date:"2024-09-25", ct:57, text:"25 Września 2024"},
+            {id: 5, size:"M", date:"2024-10-05", ct:148, text:"5 Października 2024"},
+            {id: 6, size:"S", date:"2024-10-14", ct:53, text:"14 Października 2024"},
+            {id: 7, size:"S", date:"2024-10-28", ct:45, text:"28 Października 2024"},
+            {id: 8, size:"M", date:"2024-11-18", ct:145, text:"18 Listopada 2024"},
+            {id: 9, size:"L", date:"2024-12-04", ct:105, text:"4 Grudnia 2024"},
+            {id: 10, size:"S", date:"2025-01-08", ct:5, text:"8 Stycznia 2025"},
+            {id: 11, size:"L", date:"2025-01-20", ct:163, text:"20 Stycznia 2025"},
+            {id: 12, size:"S", date:"2025-02-14", ct:43, text:"14 Lutego 2025"},
+            {id: 13, size:"M", date:"2025-02-26", ct:415, text:"26 Lutego 2025"},
+            {id: 14, size:"L", date:"2025-03-15", ct:123, text:"15 Marca 2025"},
+            {id: 15, size:"M", date:"2025-04-10", ct:103, text:"10 Kwietnia 2025"},
+            {id: 16, size:"L", date:"2025-05-05", ct:104, text:"5 Maja 2025"},
+            {id: 17, size:"L", date:"2025-06-12", ct:302, text:"12 Czerwca 2025"},
+            {id: 18, size:"L", date:"2025-06-25", ct:158, text:"25 Czerwca 2025"},
+            {id: 19, size:"L", date:"2025-07-02", ct:98, text:"2 Lipca 2025"},
+            {id: 20, size:"S", date:"2025-07-11", ct:52, text:"11 Lipca 2025"},
+            {id: 21, size:"M", date:"2025-07-18", ct:95, text:"18 Lipca 2025"},
+            {id: 22, size:"S", date:"2025-07-29", ct:70, text:"29 Lipca 2025"},
+            {id: 23, size:"M", date:"2025-08-03", ct:95, text:"3 Sierpnia 2025"},
+            {id: 24, size:"M", date:"2025-08-14", ct:101, text:"14 Sierpnia 2025"},
+            {id: 25, size:"M", date:"2025-08-21", ct:57, text:"21 Sierpnia 2025"},
+            {id: 26, size:"M", date:"2025-08-29", ct:57, text:"29 Sierpnia 2025"},
+            {id: 27, size:"S", date:"2025-09-08", ct:53, text:"8 Września 2025"},
+            {id: 28, size:"L", date:"2025-09-22", ct:137, text:"22 Września 2025"},
+            {id: 29, size:"S", date:"2025-10-04", ct:73, text:"4 Października 2025"},
+            {id: 30, size:"M", date:"2025-10-12", ct:60, text:"12 Października 2025"},
+            {id: 31, size:"S", date:"2025-10-19", ct:126, text:"19 Października 2025"},
+            {id: 32, size:"M", date:"2025-10-27", ct:57, text:"27 Października 2025"},
+            {id: 33, size:"L", date:"2025-11-05", ct:124, text:"5 Listopada 2025"},
+            {id: 34, size:"M", date:"2025-11-15", ct:75, text:"15 Listopada 2025"},
+            {id: 35, size:"M", date:"2025-11-25", ct:89, text:"25 Listopada 2025"},
+            {id: 36, size:"S", date:"2025-12-10", ct:44, text:"10 Grudnia 2025"}
         ];
 
         // Funkcja do obliczania percentyla
@@ -127,22 +141,24 @@
 
         // Główna funkcja aktualizująca wykres w zależności od ustawień
         function updateChart() {
-            const timeFilter = document.getElementById('timeFilter').value;
+            const monthsInput = document.getElementById('timeFilter').value;
             const showP50 = document.getElementById('p50').checked;
             const showP85 = document.getElementById('p85').checked;
             const showP99 = document.getElementById('p99').checked;
 
-            // Filtrowanie dat
-            // Jako że najnowsza data w zbiorze to 10 Grudnia 2025, to od niej liczymy miesiące wstecz
-            let limitDate = new Date("2000-01-01"); // domyślnie bierzemy wszystko
-            if (timeFilter === "3m") {
-                limitDate = new Date("2025-09-10"); // Ostatnie 3 miesiące
-            } else if (timeFilter === "6m") {
-                limitDate = new Date("2025-06-10"); // Ostatnie 6 miesięcy
-            }
+            let filteredData = [...rawData];
 
-            // Aplikujemy filtr czasowy
-            const filteredData = rawData.filter(d => new Date(d.date) >= limitDate);
+            // Filtrowanie dat po miesiącach (jeśli wpisano wartość)
+            if (monthsInput && !isNaN(monthsInput) && parseInt(monthsInput) > 0) {
+                const months = parseInt(monthsInput);
+                // Szukamy najnowszej daty z dostępnych danych jako punktu odniesienia
+                if (filteredData.length > 0) {
+                    const maxDate = new Date(Math.max(...filteredData.map(d => new Date(d.date))));
+                    let limitDate = new Date(maxDate);
+                    limitDate.setMonth(limitDate.getMonth() - months);
+                    filteredData = filteredData.filter(d => new Date(d.date) >= limitDate);
+                }
+            }
 
             // Generowanie podgrup do wyświetlenia
             const sizes = { 'S': '#E95A74', 'M': '#8C65D3', 'L': '#43A074' };
@@ -153,11 +169,12 @@
                 traces.push({
                     x: points.map(p => p.date),
                     y: points.map(p => p.ct),
+                    customdata: points.map(p => p.id), // Przechowujemy ID punktu
                     mode: 'markers',
                     type: 'scatter',
                     name: `Rozmiar ${s}`,
                     marker: { size: 12, color: sizes[s], line: {width: 1, color: 'white'} },
-                    text: points.map(p => `${p.text}<br>Czas realizacji: ${p.ct} dni`),
+                    text: points.map(p => `${p.text}<br>Czas realizacji: ${p.ct} dni<br><i>(Kliknij by usunąć)</i>`),
                     hoverinfo: 'text+name'
                 });
             });
@@ -170,7 +187,6 @@
             function addPercentileLine(p, color, name) {
                 const val = calculatePercentile(allCTs, p);
                 
-                // Kreska na wykresie
                 shapes.push({
                     type: 'line',
                     x0: 0, x1: 1, xref: 'paper',
@@ -178,7 +194,6 @@
                     line: { color: color, width: 2, dash: 'dash' }
                 });
                 
-                // Tekst nad kreską po prawej stronie
                 annotations.push({
                     x: 1, y: val, xref: 'paper', yref: 'y',
                     text: `<b>${name} (${Math.round(val)}d)</b>`,
@@ -195,36 +210,44 @@
             if (showP99) addPercentileLine(99, '#ef4444', '99%'); // Czerwony
 
             const layout = {
-                xaxis: { 
-                    title: 'Data ukończenia', 
-                    type: 'date', 
-                    gridcolor: '#e9ecef' 
-                },
-                yaxis: { 
-                    title: 'Czas cyklu / realizacji (dni)', 
-                    gridcolor: '#e9ecef', 
-                    zeroline: false 
-                },
-                plot_bgcolor: 'white',
-                paper_bgcolor: 'white',
-                hovermode: 'closest',
-                shapes: shapes,
-                annotations: annotations,
-                margin: { r: 100 }, // Zostawia margines po prawej na podpisy percentyli
-                legend: { 
-                    title: { text: '<b>Filtruj po wielkości</b>' }, 
-                    bgcolor: '#f8f9fa', 
-                    bordercolor: '#dee2e6', 
-                    borderwidth: 1 
-                }
+                xaxis: { title: 'Data ukończenia', type: 'date', gridcolor: '#e9ecef' },
+                yaxis: { title: 'Czas cyklu / realizacji (dni)', gridcolor: '#e9ecef', zeroline: false },
+                plot_bgcolor: 'white', paper_bgcolor: 'white',
+                hovermode: 'closest', shapes: shapes, annotations: annotations,
+                margin: { r: 100 },
+                legend: { title: { text: '<b>Filtruj po wielkości</b>' }, bgcolor: '#f8f9fa', bordercolor: '#dee2e6', borderwidth: 1 }
             };
 
-            // Rysowanie zaktualizowanego wykresu
-            Plotly.newPlot('scatterPlot', traces, layout, { responsive: true, displayModeBar: false });
+            // Wykorzystanie Plotly.react do dynamicznego odświeżenia (nie nadpisuje podpiętych zdarzeń)
+            Plotly.react('scatterPlot', traces, layout, { responsive: true, displayModeBar: false });
         }
 
         // Pierwsze uruchomienie po załadowaniu okna
-        window.onload = updateChart;
+        window.onload = function() {
+            // Inicjalizacja pustego wykresu
+            Plotly.newPlot('scatterPlot', [], {}, { responsive: true, displayModeBar: false });
+            
+            // Obsługa kliknięcia (usuwanie punktu)
+            document.getElementById('scatterPlot').on('plotly_click', function(data) {
+                if(data.points.length > 0) {
+                    const point = data.points[0];
+                    const pointId = point.customdata; // Pobieramy przypisane ID
+                    
+                    const index = rawData.findIndex(d => d.id === pointId);
+                    if (index !== -1) {
+                        const item = rawData[index];
+                        // Potwierdzenie z użytkownikiem
+                        if(confirm(`Czy na pewno chcesz usunąć ten element?\nData: ${item.text}\nCzas realizacji: ${item.ct} dni\nRozmiar: ${item.size}`)) {
+                            rawData.splice(index, 1); // Usuwa element z bazy danych
+                            updateChart(); // Odświeża wykres i przelicza na nowo percentyle
+                        }
+                    }
+                }
+            });
+
+            // Wypełnienie wykresu danymi
+            updateChart();
+        };
     </script>
 </body>
 </html>
