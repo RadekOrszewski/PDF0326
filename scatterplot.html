@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Czasu Cyklu (Cycle Time Scatterplot)</title>
+    <title>Dashboard Metryk (Scatterplot & XmR)</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         body {
@@ -24,6 +24,41 @@
             text-align: center;
             color: #333;
         }
+        
+        /* Style dla zakładek */
+        .tab-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            background-color: transparent;
+            border: none;
+            outline: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            transition: 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-button:hover {
+            color: #007bff;
+        }
+        .tab-button.active {
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Style kontrolek */
         .instructions {
             text-align: center;
             color: #666;
@@ -46,96 +81,149 @@
             align-items: center;
             gap: 10px;
         }
-        label {
-            cursor: pointer;
-        }
-        input[type="number"], input[type="date"], input[type="text"], select {
+        label { cursor: pointer; }
+        input[type="number"], input[type="date"], input[type="text"], select, textarea {
             padding: 6px;
             border-radius: 4px;
             border: 1px solid #ccc;
+            font-family: inherit;
+        }
+        textarea {
+            width: 100%;
+            max-width: 600px;
+            height: 80px;
+            resize: vertical;
         }
         button {
-            padding: 6px 15px;
+            padding: 8px 16px;
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            transition: background-color 0.2s;
         }
         button:hover {
             background-color: #0056b3;
         }
-        input[type="checkbox"] {
-            cursor: pointer;
-        }
-        .divider {
-            width: 100%;
-            height: 1px;
-            background-color: #ddd;
-            margin: 10px 0;
+        
+        /* Układ XmR */
+        .xmr-charts {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Czas realizacji zadań (Lead Times)</h1>
+        <h1>Dashboard Metryk Zespołu</h1>
         
-        <p class="instructions">
-            <strong>Filtrowanie:</strong> Kliknij rozmiar w legendzie po prawej, aby go ukryć. <br>
-            <strong>Usuwanie:</strong> Kliknij na dowolny punkt na wykresie, aby go usunąć ze zbioru.
-        </p>
-
-        <div class="controls">
-            <div class="control-group">
-                <strong>Dodaj nowy element:</strong>
-            </div>
-            <div class="control-group">
-                <label for="newDate">Data ukończenia:</label>
-                <input type="date" id="newDate" required>
-            </div>
-            <div class="control-group">
-                <label for="newCT">Czas (dni):</label>
-                <input type="number" id="newCT" min="1" placeholder="np. 15" style="width: 70px;" required>
-            </div>
-            <div class="control-group">
-                <label for="newSize">Rozmiar:</label>
-                <select id="newSize">
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label for="newComment">Komentarz:</label>
-                <input type="text" id="newComment" placeholder="Opcjonalny opis" style="width: 180px;">
-            </div>
-            <button onclick="addDataPoint()">Dodaj</button>
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="switchTab(event, 'tab-scatter')">Scatterplot (Czas Cyklu)</button>
+            <button class="tab-button" onclick="switchTab(event, 'tab-xmr')">Wykres Kontrolny (XmR)</button>
         </div>
 
-        <div class="controls">
-            <div class="control-group">
-                <label for="timeFilter"><strong>Pokaż ostatnie miesiące:</strong></label>
-                <input type="number" id="timeFilter" min="1" placeholder="np. 3" oninput="updateChart()" style="width: 80px;">
-                <span style="font-size: 12px; color: #666;">(zostaw puste dla wszystkich)</span>
+        <div id="tab-scatter" class="tab-content active">
+            <p class="instructions">
+                <strong>Filtrowanie:</strong> Kliknij rozmiar w legendzie po prawej, aby go ukryć. <br>
+                <strong>Usuwanie:</strong> Kliknij na dowolny punkt na wykresie, aby go usunąć ze zbioru.
+            </p>
+
+            <div class="controls">
+                <div class="control-group"><strong>Dodaj nowy element:</strong></div>
+                <div class="control-group">
+                    <label>Data:</label>
+                    <input type="date" id="newDate">
+                </div>
+                <div class="control-group">
+                    <label>Czas (dni):</label>
+                    <input type="number" id="newCT" min="1" style="width: 70px;">
+                </div>
+                <div class="control-group">
+                    <label>Rozmiar:</label>
+                    <select id="newSize">
+                        <option value="S">S</option><option value="M">M</option><option value="L">L</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <input type="text" id="newComment" placeholder="Opcjonalny opis" style="width: 140px;">
+                </div>
+                <button onclick="addDataPoint()">Dodaj</button>
             </div>
-            <div style="width: 20px;"></div> <div class="control-group">
-                <strong>Linie Percentyli:</strong>
-                <label><input type="checkbox" id="p50" onchange="updateChart()"> 50%</label>
-                <label><input type="checkbox" id="p85" onchange="updateChart()"> 85%</label>
-                <label><input type="checkbox" id="p99" onchange="updateChart()"> 99%</label>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label><strong>Pokaż ostatnie miesiące:</strong></label>
+                    <input type="number" id="timeFilter" min="1" placeholder="np. 3" oninput="updateChart()" style="width: 80px;">
+                </div>
+                <div style="width: 20px;"></div>
+                <div class="control-group">
+                    <strong>Linie Percentyli:</strong>
+                    <label><input type="checkbox" id="p50" onchange="updateChart()"> 50%</label>
+                    <label><input type="checkbox" id="p85" onchange="updateChart()"> 85%</label>
+                    <label><input type="checkbox" id="p99" onchange="updateChart()"> 99%</label>
+                </div>
+            </div>
+
+            <div id="scatterPlot" style="width:100%; height:600px;"></div>
+        </div>
+
+
+        <div id="tab-xmr" class="tab-content">
+            <p class="instructions">
+                Wprowadź czasy realizacji (CT) w kolejności ukończenia, oddzielone przecinkami, spacjami lub nową linią. Skrypt automatycznie wyliczy <strong>średnią, mR, UNPL, LNPL i URL</strong>.
+            </p>
+            
+            <div class="controls" style="flex-direction: column; align-items: stretch;">
+                <label for="xmrInput"><strong>Dane wejściowe (Czasy Cyklu):</strong></label>
+                <textarea id="xmrInput" placeholder="np. 38, 24, 14, 9, 4, 25, 19, 51, 48, 15, 22, 42">38, 24, 14, 9, 4, 25, 19, 51, 48, 15, 22, 42, 17, 7, 5, 20, 63, 6, 56, 24, 22, 50, 8, 2, 3, 8, 36, 27, 29, 20</textarea>
+                <button onclick="generateXmR()" style="align-self: flex-start;">Generuj Wykresy XmR</button>
+            </div>
+
+            <div class="xmr-charts">
+                <div id="xChart" style="width:100%; height:400px;"></div>
+                <div id="mrChart" style="width:100%; height:400px;"></div>
             </div>
         </div>
 
-        <div id="scatterPlot" style="width:100%; height:600px;"></div>
     </div>
 
     <script>
-        // Słownik do tłumaczenia nazw miesięcy
-        const polishMonths = ["Stycznia", "Lutego", "Marca", "Kwietnia", "Maja", "Czerwca", "Lipca", "Sierpnia", "Września", "Października", "Listopada", "Grudnia"];
+        // ==========================================
+        // LOGIKA ZAKŁADEK
+        // ==========================================
+        function switchTab(evt, tabId) {
+            // Ukryj wszystkie zakładki
+            let tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].style.display = "none";
+                tabContents[i].classList.remove("active");
+            }
+            // Zresetuj klasy przycisków
+            let tablinks = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            // Pokaż wybraną zakładkę
+            document.getElementById(tabId).style.display = "block";
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.className += " active";
 
-        // Płaska struktura początkowych danych
+            // Wymuś odrysowanie wykresów po zmianie widoczności diva (Plotly fix)
+            if(tabId === 'tab-scatter') {
+                updateChart();
+            } else if(tabId === 'tab-xmr') {
+                generateXmR();
+            }
+        }
+
+        // ==========================================
+        // LOGIKA SCATTERPLOT (ZAKŁADKA 1)
+        // ==========================================
+        const polishMonths = ["Stycznia", "Lutego", "Marca", "Kwietnia", "Maja", "Czerwca", "Lipca", "Sierpnia", "Września", "Października", "Listopada", "Grudnia"];
         let rawData = [
             {id: 1, size:"S", date:"2024-07-15", ct:49, text:"15 Lipca 2024"},
             {id: 2, size:"S", date:"2024-08-22", ct:48, text:"22 Sierpnia 2024"},
@@ -143,39 +231,12 @@
             {id: 4, size:"M", date:"2024-09-25", ct:57, text:"25 Września 2024"},
             {id: 5, size:"M", date:"2024-10-05", ct:148, text:"5 Października 2024"},
             {id: 6, size:"S", date:"2024-10-14", ct:53, text:"14 Października 2024"},
-            {id: 7, size:"S", date:"2024-10-28", ct:45, text:"28 Października 2024"},
-            {id: 8, size:"M", date:"2024-11-18", ct:145, text:"18 Listopada 2024"},
-            {id: 9, size:"L", date:"2024-12-04", ct:105, text:"4 Grudnia 2024"},
-            {id: 10, size:"S", date:"2025-01-08", ct:5, text:"8 Stycznia 2025"},
-            {id: 11, size:"L", date:"2025-01-20", ct:163, text:"20 Stycznia 2025"},
-            {id: 12, size:"S", date:"2025-02-14", ct:43, text:"14 Lutego 2025"},
-            {id: 13, size:"M", date:"2025-02-26", ct:415, text:"26 Lutego 2025"},
-            {id: 14, size:"L", date:"2025-03-15", ct:123, text:"15 Marca 2025"},
-            {id: 15, size:"M", date:"2025-04-10", ct:103, text:"10 Kwietnia 2025"},
-            {id: 16, size:"L", date:"2025-05-05", ct:104, text:"5 Maja 2025"},
-            {id: 17, size:"L", date:"2025-06-12", ct:302, text:"12 Czerwca 2025"},
-            {id: 18, size:"L", date:"2025-06-25", ct:158, text:"25 Czerwca 2025"},
-            {id: 19, size:"L", date:"2025-07-02", ct:98, text:"2 Lipca 2025"},
-            {id: 20, size:"S", date:"2025-07-11", ct:52, text:"11 Lipca 2025"},
-            {id: 21, size:"M", date:"2025-07-18", ct:95, text:"18 Lipca 2025"},
-            {id: 22, size:"S", date:"2025-07-29", ct:70, text:"29 Lipca 2025"},
-            {id: 23, size:"M", date:"2025-08-03", ct:95, text:"3 Sierpnia 2025"},
-            {id: 24, size:"M", date:"2025-08-14", ct:101, text:"14 Sierpnia 2025"},
-            {id: 25, size:"M", date:"2025-08-21", ct:57, text:"21 Sierpnia 2025"},
-            {id: 26, size:"M", date:"2025-08-29", ct:57, text:"29 Sierpnia 2025"},
-            {id: 27, size:"S", date:"2025-09-08", ct:53, text:"8 Września 2025"},
-            {id: 28, size:"L", date:"2025-09-22", ct:137, text:"22 Września 2025"},
-            {id: 29, size:"S", date:"2025-10-04", ct:73, text:"4 Października 2025"},
-            {id: 30, size:"M", date:"2025-10-12", ct:60, text:"12 Października 2025"},
-            {id: 31, size:"S", date:"2025-10-19", ct:126, text:"19 Października 2025"},
-            {id: 32, size:"M", date:"2025-10-27", ct:57, text:"27 Października 2025"},
-            {id: 33, size:"L", date:"2025-11-05", ct:124, text:"5 Listopada 2025"},
-            {id: 34, size:"M", date:"2025-11-15", ct:75, text:"15 Listopada 2025"},
-            {id: 35, size:"M", date:"2025-11-25", ct:89, text:"25 Listopada 2025"},
-            {id: 36, size:"S", date:"2025-12-10", ct:44, text:"10 Grudnia 2025"}
+            {id: 7, size:"M", date:"2024-11-18", ct:145, text:"18 Listopada 2024"},
+            {id: 8, size:"L", date:"2024-12-04", ct:105, text:"4 Grudnia 2024"},
+            {id: 9, size:"S", date:"2025-01-08", ct:5, text:"8 Stycznia 2025"},
+            {id: 10, size:"L", date:"2025-01-20", ct:163, text:"20 Stycznia 2025"}
         ];
 
-        // Funkcja do obliczania percentyla
         function calculatePercentile(values, p) {
             if (values.length === 0) return 0;
             const sorted = [...values].sort((a, b) => a - b);
@@ -187,54 +248,34 @@
             return sorted[lower] * (1 - weight) + sorted[upper] * weight;
         }
 
-        // Funkcja obsługująca dodawanie nowego punktu z formularza
         function addDataPoint() {
             const dateInput = document.getElementById('newDate').value;
             const ctInput = document.getElementById('newCT').value;
             const sizeInput = document.getElementById('newSize').value;
             const commentInput = document.getElementById('newComment').value;
 
-            if (!dateInput || !ctInput) {
-                alert("Wypełnij przynajmniej Datę ukończenia oraz Czas (dni)!");
-                return;
-            }
+            if (!dateInput || !ctInput) { alert("Wypełnij Datę oraz Czas (dni)!"); return; }
 
-            // Generowanie unikalnego ID dla nowego punktu
-            const newId = Date.now();
-            
-            // Formatowanie daty do wyświetlania w tooltipie
             const d = new Date(dateInput);
-            const formattedDateText = `${d.getDate()} ${polishMonths[d.getMonth()]} ${d.getFullYear()}`;
-
-            // Dodanie obiektu do głównej tablicy danych
+            const textDate = `${d.getDate()} ${polishMonths[d.getMonth()]} ${d.getFullYear()}`;
             rawData.push({
-                id: newId,
-                size: sizeInput,
-                date: dateInput,
-                ct: parseInt(ctInput, 10),
-                text: formattedDateText,
-                comment: commentInput.trim()
+                id: Date.now(), size: sizeInput, date: dateInput,
+                ct: parseInt(ctInput, 10), text: textDate, comment: commentInput.trim()
             });
 
-            // Czyszczenie formularza
             document.getElementById('newDate').value = '';
             document.getElementById('newCT').value = '';
             document.getElementById('newComment').value = '';
-
-            // Przeliczenie i narysowanie wykresu na nowo
             updateChart();
         }
 
-        // Główna funkcja aktualizująca wykres w zależności od ustawień
         function updateChart() {
-            const monthsInput = document.getElementById('timeFilter').value;
-            const showP50 = document.getElementById('p50').checked;
-            const showP85 = document.getElementById('p85').checked;
-            const showP99 = document.getElementById('p99').checked;
+            // Upewnij się, że div jest widoczny zanim zaczniesz rysować
+            if(document.getElementById('tab-scatter').style.display === 'none') return;
 
+            const monthsInput = document.getElementById('timeFilter').value;
             let filteredData = [...rawData];
 
-            // Filtrowanie dat po miesiącach (jeśli wpisano wartość)
             if (monthsInput && !isNaN(monthsInput) && parseInt(monthsInput) > 0) {
                 const months = parseInt(monthsInput);
                 if (filteredData.length > 0) {
@@ -245,7 +286,6 @@
                 }
             }
 
-            // Generowanie podgrup do wyświetlenia
             const sizes = { 'S': '#E95A74', 'M': '#8C65D3', 'L': '#43A074' };
             const traces = [];
 
@@ -254,24 +294,21 @@
                 traces.push({
                     x: points.map(p => p.date),
                     y: points.map(p => p.ct),
-                    customdata: points.map(p => p.id), // Przechowujemy ID punktu
+                    customdata: points.map(p => p.id),
                     mode: 'markers',
                     type: 'scatter',
                     name: `Rozmiar ${s}`,
                     marker: { size: 12, color: sizes[s], line: {width: 1, color: 'white'} },
                     text: points.map(p => {
-                        let tooltip = `<b>${p.text}</b><br>Czas realizacji: ${p.ct} dni`;
-                        if (p.comment) {
-                            tooltip += `<br>Komentarz: <i>${p.comment}</i>`;
-                        }
-                        tooltip += `<br><span style="font-size:10px; color:#888;">(Kliknij by usunąć)</span>`;
-                        return tooltip;
+                        let t = `<b>${p.text}</b><br>CT: ${p.ct} dni`;
+                        if (p.comment) t += `<br><i>${p.comment}</i>`;
+                        t += `<br><span style="font-size:10px; color:#888;">(Kliknij by usunąć)</span>`;
+                        return t;
                     }),
                     hoverinfo: 'text+name'
                 });
             });
 
-            // Generowanie linii i adnotacji percentyli
             const allCTs = filteredData.map(d => d.ct);
             const shapes = [];
             const annotations = [];
@@ -279,56 +316,138 @@
             function addPercentileLine(p, color, name) {
                 if(allCTs.length === 0) return;
                 const val = calculatePercentile(allCTs, p);
-                
-                shapes.push({
-                    type: 'line',
-                    x0: 0, x1: 1, xref: 'paper',
-                    y0: val, y1: val, yref: 'y',
-                    line: { color: color, width: 2, dash: 'dash' }
-                });
-                
-                annotations.push({
-                    x: 1, y: val, xref: 'paper', yref: 'y',
-                    text: `<b>${name} (${Math.round(val)}d)</b>`,
-                    showarrow: false,
-                    xanchor: 'left',
-                    yanchor: 'bottom',
-                    xshift: 10,
-                    font: { color: color, size: 12 }
-                });
+                shapes.push({ type: 'line', x0: 0, x1: 1, xref: 'paper', y0: val, y1: val, yref: 'y', line: { color: color, width: 2, dash: 'dash' }});
+                annotations.push({ x: 1, y: val, xref: 'paper', yref: 'y', text: `<b>${name} (${Math.round(val)}d)</b>`, showarrow: false, xanchor: 'left', yanchor: 'bottom', xshift: 10, font: { color: color, size: 12 }});
             }
 
-            if (showP50) addPercentileLine(50, '#3b82f6', '50%'); // Niebieski
-            if (showP85) addPercentileLine(85, '#f59e0b', '85%'); // Pomarańczowy
-            if (showP99) addPercentileLine(99, '#ef4444', '99%'); // Czerwony
+            if (document.getElementById('p50').checked) addPercentileLine(50, '#3b82f6', '50%');
+            if (document.getElementById('p85').checked) addPercentileLine(85, '#f59e0b', '85%');
+            if (document.getElementById('p99').checked) addPercentileLine(99, '#ef4444', '99%');
 
             const layout = {
                 xaxis: { title: 'Data ukończenia', type: 'date', gridcolor: '#e9ecef' },
-                yaxis: { title: 'Czas cyklu / realizacji (dni)', gridcolor: '#e9ecef', zeroline: false },
-                plot_bgcolor: 'white', paper_bgcolor: 'white',
-                hovermode: 'closest', shapes: shapes, annotations: annotations,
-                margin: { r: 100 },
-                legend: { title: { text: '<b>Filtruj po wielkości</b>' }, bgcolor: '#f8f9fa', bordercolor: '#dee2e6', borderwidth: 1 }
+                yaxis: { title: 'Czas cyklu (dni)', gridcolor: '#e9ecef', zeroline: false },
+                plot_bgcolor: 'white', paper_bgcolor: 'white', hovermode: 'closest',
+                shapes: shapes, annotations: annotations, margin: { r: 100 },
+                legend: { bgcolor: '#f8f9fa', bordercolor: '#dee2e6', borderwidth: 1 }
             };
 
-            // Użycie Plotly.react do płynnego odświeżania
             Plotly.react('scatterPlot', traces, layout, { responsive: true, displayModeBar: false });
         }
 
-        // Inicjalizacja po załadowaniu okna
+        // ==========================================
+        // LOGIKA WYKRESÓW XmR (ZAKŁADKA 2)
+        // ==========================================
+        function generateXmR() {
+            // Upewnij się, że div jest widoczny zanim zaczniesz rysować
+            if(document.getElementById('tab-xmr').style.display === 'none') return;
+
+            const inputTxt = document.getElementById('xmrInput').value;
+            if(!inputTxt.trim()) return;
+
+            // Parsowanie wejścia (podział po przecinkach, spacjach i nowych liniach)
+            const rawValues = inputTxt.split(/[\s,]+/).filter(v => v.trim() !== "");
+            const values = rawValues.map(v => parseFloat(v)).filter(v => !isNaN(v));
+
+            if(values.length < 2) {
+                alert("Potrzebujesz co najmniej 2 wartości, aby stworzyć wykres XmR.");
+                return;
+            }
+
+            const n = values.length;
+            const xIndices = Array.from({length: n}, (_, i) => i + 1);
+
+            // Obliczenia dla X
+            const meanX = values.reduce((a, b) => a + b, 0) / n;
+
+            // Obliczenia dla mR
+            const mrValues = [];
+            for(let i = 1; i < n; i++) {
+                mrValues.push(Math.abs(values[i] - values[i-1]));
+            }
+            const meanMR = mrValues.reduce((a, b) => a + b, 0) / mrValues.length;
+
+            // Granice
+            const UNPL = meanX + (2.66 * meanMR);
+            const LNPL = Math.max(0, meanX - (2.66 * meanMR)); // LNPL nie spada poniżej 0
+            const URL = 3.267 * meanMR;
+
+            // ====================
+            // Rysowanie wykresu X
+            // ====================
+            const traceX = {
+                x: xIndices,
+                y: values,
+                mode: 'lines+markers',
+                name: 'Czas Cyklu',
+                line: { color: 'dodgerblue', width: 2 },
+                marker: { size: 8 }
+            };
+            const layoutX = {
+                title: '<b>Wykres X (Wartości Pojedyncze)</b>',
+                xaxis: { title: 'Kolejność ukończenia', tickmode: 'linear', gridcolor: '#e9ecef' },
+                yaxis: { title: 'Czas Cyklu', gridcolor: '#e9ecef', rangemode: 'tozero' },
+                plot_bgcolor: 'white', paper_bgcolor: 'white', hovermode: 'x',
+                showlegend: false,
+                shapes: [
+                    { type: 'line', x0: 1, x1: n, y0: meanX, y1: meanX, line: { color: 'red', width: 2, dash: 'dash' } },
+                    { type: 'line', x0: 1, x1: n, y0: UNPL, y1: UNPL, line: { color: 'darkgreen', width: 2, dash: 'dashdot' } },
+                    { type: 'line', x0: 1, x1: n, y0: LNPL, y1: LNPL, line: { color: 'darkorange', width: 2, dash: 'dashdot' } }
+                ],
+                annotations: [
+                    { x: n, y: meanX, text: `Średnia: ${meanX.toFixed(1)}`, showarrow: false, xanchor: 'left', xshift: 10, font: {color: 'red'} },
+                    { x: n, y: UNPL, text: `UNPL: ${UNPL.toFixed(1)}`, showarrow: false, xanchor: 'left', xshift: 10, font: {color: 'darkgreen'} },
+                    { x: n, y: LNPL, text: `LNPL: ${LNPL.toFixed(1)}`, showarrow: false, xanchor: 'left', xshift: 10, font: {color: 'darkorange'} }
+                ],
+                margin: { r: 100 }
+            };
+            Plotly.react('xChart', [traceX], layoutX, { responsive: true, displayModeBar: false });
+
+            // ====================
+            // Rysowanie wykresu mR
+            // ====================
+            // MR zaczyna się od indeksu 2 (bo to różnica między pkt 2 a 1)
+            const traceMR = {
+                x: xIndices.slice(1),
+                y: mrValues,
+                mode: 'lines+markers',
+                name: 'Moving Range',
+                line: { color: 'purple', width: 2 },
+                marker: { size: 8, symbol: 'square' }
+            };
+            const layoutMR = {
+                title: '<b>Wykres mR (Ruchome Rozstępy)</b>',
+                xaxis: { title: 'Kolejność ukończenia', tickmode: 'linear', gridcolor: '#e9ecef' },
+                yaxis: { title: 'Ruchomy Rozstęp', gridcolor: '#e9ecef', rangemode: 'tozero' },
+                plot_bgcolor: 'white', paper_bgcolor: 'white', hovermode: 'x',
+                showlegend: false,
+                shapes: [
+                    { type: 'line', x0: 2, x1: n, y0: meanMR, y1: meanMR, line: { color: 'red', width: 2, dash: 'dash' } },
+                    { type: 'line', x0: 2, x1: n, y0: URL, y1: URL, line: { color: 'darkgreen', width: 2, dash: 'dashdot' } }
+                ],
+                annotations: [
+                    { x: n, y: meanMR, text: `Śr mR: ${meanMR.toFixed(1)}`, showarrow: false, xanchor: 'left', xshift: 10, font: {color: 'red'} },
+                    { x: n, y: URL, text: `URL: ${URL.toFixed(1)}`, showarrow: false, xanchor: 'left', xshift: 10, font: {color: 'darkgreen'} }
+                ],
+                margin: { r: 100 }
+            };
+            Plotly.react('mrChart', [traceMR], layoutMR, { responsive: true, displayModeBar: false });
+        }
+
+        // ==========================================
+        // INICJALIZACJA
+        // ==========================================
         window.onload = function() {
+            // Inicjalizacja pustego scatterplota i przypisanie eventu kliknięcia (usuwanie)
             Plotly.newPlot('scatterPlot', [], {}, { responsive: true, displayModeBar: false });
-            
-            // Obsługa kliknięcia (usuwanie punktu)
             document.getElementById('scatterPlot').on('plotly_click', function(data) {
                 if(data.points.length > 0) {
                     const point = data.points[0];
                     const pointId = point.customdata;
-                    
                     const index = rawData.findIndex(d => d.id === pointId);
                     if (index !== -1) {
                         const item = rawData[index];
-                        if(confirm(`Czy na pewno chcesz usunąć ten element?\nData: ${item.text}\nCzas realizacji: ${item.ct} dni\nRozmiar: ${item.size}`)) {
+                        if(confirm(`Usunąć ten element?\nData: ${item.text}\nCT: ${item.ct} dni\nRozmiar: ${item.size}`)) {
                             rawData.splice(index, 1);
                             updateChart();
                         }
@@ -336,7 +455,9 @@
                 }
             });
 
+            // Uruchomienie domyślnych widoków
             updateChart();
+            generateXmR(); 
         };
     </script>
 </body>
