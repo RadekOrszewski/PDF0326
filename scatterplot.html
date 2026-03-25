@@ -33,7 +33,7 @@
         .controls {
             display: flex;
             flex-wrap: wrap;
-            gap: 30px;
+            gap: 20px;
             justify-content: center;
             background-color: #f1f3f5;
             padding: 15px;
@@ -49,13 +49,31 @@
         label {
             cursor: pointer;
         }
-        input[type="number"] {
-            padding: 5px;
+        input[type="number"], input[type="date"], input[type="text"], select {
+            padding: 6px;
             border-radius: 4px;
             border: 1px solid #ccc;
         }
+        button {
+            padding: 6px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
         input[type="checkbox"] {
             cursor: pointer;
+        }
+        .divider {
+            width: 100%;
+            height: 1px;
+            background-color: #ddd;
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -65,18 +83,45 @@
         <h1>Czas realizacji zadań (Lead Times)</h1>
         
         <p class="instructions">
-            <strong>Filtrowanie:</strong> Kliknij rozmiar w legendzie, aby go ukryć. <br>
+            <strong>Filtrowanie:</strong> Kliknij rozmiar w legendzie po prawej, aby go ukryć. <br>
             <strong>Usuwanie:</strong> Kliknij na dowolny punkt na wykresie, aby go usunąć ze zbioru.
         </p>
 
         <div class="controls">
             <div class="control-group">
-                <label for="timeFilter"><strong>Ostatnie miesiące:</strong></label>
+                <strong>Dodaj nowy element:</strong>
+            </div>
+            <div class="control-group">
+                <label for="newDate">Data ukończenia:</label>
+                <input type="date" id="newDate" required>
+            </div>
+            <div class="control-group">
+                <label for="newCT">Czas (dni):</label>
+                <input type="number" id="newCT" min="1" placeholder="np. 15" style="width: 70px;" required>
+            </div>
+            <div class="control-group">
+                <label for="newSize">Rozmiar:</label>
+                <select id="newSize">
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="newComment">Komentarz:</label>
+                <input type="text" id="newComment" placeholder="Opcjonalny opis" style="width: 180px;">
+            </div>
+            <button onclick="addDataPoint()">Dodaj</button>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="timeFilter"><strong>Pokaż ostatnie miesiące:</strong></label>
                 <input type="number" id="timeFilter" min="1" placeholder="np. 3" oninput="updateChart()" style="width: 80px;">
                 <span style="font-size: 12px; color: #666;">(zostaw puste dla wszystkich)</span>
             </div>
-            <div class="control-group">
-                <strong>Percentyle:</strong>
+            <div style="width: 20px;"></div> <div class="control-group">
+                <strong>Linie Percentyli:</strong>
                 <label><input type="checkbox" id="p50" onchange="updateChart()"> 50%</label>
                 <label><input type="checkbox" id="p85" onchange="updateChart()"> 85%</label>
                 <label><input type="checkbox" id="p99" onchange="updateChart()"> 99%</label>
@@ -87,7 +132,10 @@
     </div>
 
     <script>
-        // Płaska struktura danych (dodano unikalne ID do usuwania konkretnych punktów)
+        // Słownik do tłumaczenia nazw miesięcy
+        const polishMonths = ["Stycznia", "Lutego", "Marca", "Kwietnia", "Maja", "Czerwca", "Lipca", "Sierpnia", "Września", "Października", "Listopada", "Grudnia"];
+
+        // Płaska struktura początkowych danych
         let rawData = [
             {id: 1, size:"S", date:"2024-07-15", ct:49, text:"15 Lipca 2024"},
             {id: 2, size:"S", date:"2024-08-22", ct:48, text:"22 Sierpnia 2024"},
@@ -139,6 +187,44 @@
             return sorted[lower] * (1 - weight) + sorted[upper] * weight;
         }
 
+        // Funkcja obsługująca dodawanie nowego punktu z formularza
+        function addDataPoint() {
+            const dateInput = document.getElementById('newDate').value;
+            const ctInput = document.getElementById('newCT').value;
+            const sizeInput = document.getElementById('newSize').value;
+            const commentInput = document.getElementById('newComment').value;
+
+            if (!dateInput || !ctInput) {
+                alert("Wypełnij przynajmniej Datę ukończenia oraz Czas (dni)!");
+                return;
+            }
+
+            // Generowanie unikalnego ID dla nowego punktu
+            const newId = Date.now();
+            
+            // Formatowanie daty do wyświetlania w tooltipie
+            const d = new Date(dateInput);
+            const formattedDateText = `${d.getDate()} ${polishMonths[d.getMonth()]} ${d.getFullYear()}`;
+
+            // Dodanie obiektu do głównej tablicy danych
+            rawData.push({
+                id: newId,
+                size: sizeInput,
+                date: dateInput,
+                ct: parseInt(ctInput, 10),
+                text: formattedDateText,
+                comment: commentInput.trim()
+            });
+
+            // Czyszczenie formularza
+            document.getElementById('newDate').value = '';
+            document.getElementById('newCT').value = '';
+            document.getElementById('newComment').value = '';
+
+            // Przeliczenie i narysowanie wykresu na nowo
+            updateChart();
+        }
+
         // Główna funkcja aktualizująca wykres w zależności od ustawień
         function updateChart() {
             const monthsInput = document.getElementById('timeFilter').value;
@@ -151,7 +237,6 @@
             // Filtrowanie dat po miesiącach (jeśli wpisano wartość)
             if (monthsInput && !isNaN(monthsInput) && parseInt(monthsInput) > 0) {
                 const months = parseInt(monthsInput);
-                // Szukamy najnowszej daty z dostępnych danych jako punktu odniesienia
                 if (filteredData.length > 0) {
                     const maxDate = new Date(Math.max(...filteredData.map(d => new Date(d.date))));
                     let limitDate = new Date(maxDate);
@@ -174,7 +259,14 @@
                     type: 'scatter',
                     name: `Rozmiar ${s}`,
                     marker: { size: 12, color: sizes[s], line: {width: 1, color: 'white'} },
-                    text: points.map(p => `${p.text}<br>Czas realizacji: ${p.ct} dni<br><i>(Kliknij by usunąć)</i>`),
+                    text: points.map(p => {
+                        let tooltip = `<b>${p.text}</b><br>Czas realizacji: ${p.ct} dni`;
+                        if (p.comment) {
+                            tooltip += `<br>Komentarz: <i>${p.comment}</i>`;
+                        }
+                        tooltip += `<br><span style="font-size:10px; color:#888;">(Kliknij by usunąć)</span>`;
+                        return tooltip;
+                    }),
                     hoverinfo: 'text+name'
                 });
             });
@@ -185,6 +277,7 @@
             const annotations = [];
 
             function addPercentileLine(p, color, name) {
+                if(allCTs.length === 0) return;
                 const val = calculatePercentile(allCTs, p);
                 
                 shapes.push({
@@ -218,34 +311,31 @@
                 legend: { title: { text: '<b>Filtruj po wielkości</b>' }, bgcolor: '#f8f9fa', bordercolor: '#dee2e6', borderwidth: 1 }
             };
 
-            // Wykorzystanie Plotly.react do dynamicznego odświeżenia (nie nadpisuje podpiętych zdarzeń)
+            // Użycie Plotly.react do płynnego odświeżania
             Plotly.react('scatterPlot', traces, layout, { responsive: true, displayModeBar: false });
         }
 
-        // Pierwsze uruchomienie po załadowaniu okna
+        // Inicjalizacja po załadowaniu okna
         window.onload = function() {
-            // Inicjalizacja pustego wykresu
             Plotly.newPlot('scatterPlot', [], {}, { responsive: true, displayModeBar: false });
             
             // Obsługa kliknięcia (usuwanie punktu)
             document.getElementById('scatterPlot').on('plotly_click', function(data) {
                 if(data.points.length > 0) {
                     const point = data.points[0];
-                    const pointId = point.customdata; // Pobieramy przypisane ID
+                    const pointId = point.customdata;
                     
                     const index = rawData.findIndex(d => d.id === pointId);
                     if (index !== -1) {
                         const item = rawData[index];
-                        // Potwierdzenie z użytkownikiem
                         if(confirm(`Czy na pewno chcesz usunąć ten element?\nData: ${item.text}\nCzas realizacji: ${item.ct} dni\nRozmiar: ${item.size}`)) {
-                            rawData.splice(index, 1); // Usuwa element z bazy danych
-                            updateChart(); // Odświeża wykres i przelicza na nowo percentyle
+                            rawData.splice(index, 1);
+                            updateChart();
                         }
                     }
                 }
             });
 
-            // Wypełnienie wykresu danymi
             updateChart();
         };
     </script>
